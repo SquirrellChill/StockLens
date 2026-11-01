@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, String, cast
@@ -5,11 +6,13 @@ from sqlalchemy import or_, String, cast
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
 
+logger = logging.getLogger(__name__)
+
 
 class ProductService:
     """
     Business logic layer for Product operations.
-    Keeps database queries separated from API route handlers.
+    Encapsulates database operations, transaction handling, and queries.
     """
 
     @staticmethod
@@ -22,11 +25,11 @@ class ProductService:
         db: Session,
         search: Optional[str] = None,
         skip: int = 0,
-        limit: int = 100
+        limit: Optional[int] = None
     ) -> List[Product]:
         """
         List all products with optional name or synonym search.
-        Orders by latest id.
+        Orders by newest products first.
         """
         query = db.query(Product)
         if search and search.strip():
@@ -37,11 +40,16 @@ class ProductService:
                     cast(Product.alternative_names, String).ilike(search_term)
                 )
             )
-        return query.order_by(Product.id.desc()).offset(skip).limit(limit).all()
+        query = query.order_by(Product.id.desc()).offset(skip)
+        if limit is not None:
+            query = query.limit(limit)
+        return query.all()
 
     @staticmethod
     def create(db: Session, product_in: ProductCreate) -> Product:
-        """Create a new product record."""
+        """
+        Create a new product record with atomic transaction management.
+        """
         db_product = Product(
             name=product_in.name,
             quantity=product_in.quantity,
@@ -49,23 +57,21 @@ class ProductService:
             expiration_date=product_in.expiration_date,
             alternative_names=product_in.alternative_names,
         )
-        db.add(db_product)
-        db.commit()
-        db.refresh(db_product)
-        return db_product
+        try:
+            db.add(db_product)
+            db.commit()
+            db.refresh(db_product)
+            return db_product
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to create product: {e}")
+            raise
 
     @staticmethod
     def update(db: Session, product_id: int, product_in: ProductUpdate) -> Optional[Product]:
         """
-        Edit / Update product details (Milestone 2 priority).
-        
-        Args:
-            db: Active SQLAlchemy database session.
-            product_id: ID of the product to update.
-            product_in: Validated updated fields.
-
-        Returns:
-            Updated Product model instance if found, or None if not found.
+        Update an existing product's details with atomic transaction management.
+        Returns the updated Product instance, or None if product does not exist.
         """
         db_product = ProductService.get_by_id(db, product_id)
         if not db_product:
@@ -76,20 +82,33 @@ class ProductService:
         for field, value in update_data.items():
             setattr(db_product, field, value)
 
-        db.commit()
-        db.refresh(db_product)
-        return db_product
+        try:
+            db.commit()
+            db.refresh(db_product)
+            return db_product
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to update product {product_id}: {e}")
+            raise
 
     @staticmethod
     def delete(db: Session, product_id: int) -> bool:
-        """Delete a product by ID."""
+        """
+        Delete a product by ID with atomic transaction management.
+        Returns True if deleted, False if product does not exist.
+        """
         db_product = ProductService.get_by_id(db, product_id)
         if not db_product:
             return False
 
-        db.delete(db_product)
-        db.commit()
-        return True
+        try:
+            db.delete(db_product)
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to delete product {product_id}: {e}")
+            raise
 
 
 product_service = ProductService()

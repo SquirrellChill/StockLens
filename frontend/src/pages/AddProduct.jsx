@@ -39,7 +39,7 @@ export default function AddProduct() {
     try {
       if (editing) await productService.update(id, form)
       else await productService.create(form)
-      navigate('/app/products')
+      navigate('/app/products', { state: { success: editing ? 'Product updated successfully.' : 'Product created successfully.' } })
     } catch (err) {
       setError(err.message || 'Could not save your changes. Please try again.')
     } finally {

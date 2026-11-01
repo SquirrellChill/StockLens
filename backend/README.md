@@ -1,133 +1,181 @@
-# StockLens Backend API
+# StockLens Backend API Foundation
 
-Backend service for **StockLens**, an inventory management system featuring OCR invoice scanning.
-
-Developed with:
-- **FastAPI** (Python 3.12+)
-- **SQLAlchemy 2.0** ORM
-- **PostgreSQL** & **SQLite** support
-- **Pydantic v2** data validation & schemas
-- **Alembic** database migrations
-- **Pytest** automated testing
-- **OpenCV & Tesseract OCR**
+Backend service for **StockLens**, an inventory management and invoice tracking system built with **FastAPI**, **SQLAlchemy 2.0**, **PostgreSQL**, and **Pydantic v2**.
 
 ---
 
-## Architecture & Directory Structure
-
-The backend follows Clean Architecture principles, ensuring clear separation between API routes, Pydantic schemas, database models, and business logic:
+## Architecture Overview
 
 ```
 backend/
-├── alembic/                    # Database migration scripts
-│   ├── env.py                  # Alembic environment configuration
-│   └── versions/               # Migration revision files
 ├── app/
-│   ├── main.py                 # FastAPI application entrypoint & middleware
-│   ├── core/                   # Core application setup
+│   ├── main.py                 # FastAPI application, CORS middleware & lifespan manager
+│   ├── core/
 │   │   ├── config.py           # Environment settings (Pydantic BaseSettings)
-│   │   └── database.py         # SQLAlchemy engine, session maker & get_db dependency
-│   ├── models/                 # SQLAlchemy ORM database models
+│   │   └── database.py         # SQLAlchemy engine, session maker & connection checks
+│   ├── models/                 # SQLAlchemy ORM models
+│   │   ├── __init__.py         # Model aggregation for Alembic metadata
 │   │   ├── base.py             # Declarative Base
-│   │   └── product.py          # Product database table definition
-│   ├── schemas/                # Pydantic validation schemas
-│   │   └── product.py          # Request & Response models (ProductCreate, ProductUpdate, etc.)
-│   ├── services/               # Business logic layer (isolated from HTTP)
-│   │   └── product_service.py  # Product queries, updates, and validations
-│   └── api/                    # HTTP route handlers
-│       ├── deps.py             # Reusable FastAPI dependencies
-│       └── v1/
-│           ├── router.py       # API v1 router aggregator
-│           └── endpoints/
-│               └── products.py # Product endpoints (GET, POST, PUT, DELETE)
+│   │   ├── product.py          # Product inventory model
+│   │   ├── invoice.py          # Supplier invoice model
+│   │   └── invoice_item.py     # Invoice line items model
+│   ├── schemas/                # Pydantic v2 request/response validation schemas
+│   │   ├── __init__.py         # Schema aggregation
+│   │   ├── product.py          # Product schemas (ProductCreate, ProductUpdate, etc.)
+│   │   └── invoice.py          # Invoice schemas (InvoiceCreate, InvoiceResponse, etc.)
+│   ├── routers/                # HTTP API route handlers
+│   │   ├── __init__.py         # API router aggregator mounted at /api
+│   │   ├── products.py         # Product CRUD endpoints
+│   │   └── invoices.py         # Invoice endpoints
+│   ├── services/               # Business logic layer
+│   │   ├── __init__.py
+│   │   ├── product_service.py  # Product operations
+│   │   ├── ocr_service.py      # OCR parsing foundation
+│   │   └── invoice_service.py  # Invoice operations
+│   └── utils/
+│       ├── __init__.py
+│       └── image_processing.py # Image handling utilities
+├── alembic/                    # Database migrations
+│   ├── env.py                  # Alembic environment configured to app settings
+│   └── versions/               # Migration scripts (products & invoices tables)
 ├── scripts/
-│   └── seed.py                 # Seeds initial demo products for Milestone 2
-├── tests/                      # Automated test suite
-│   ├── conftest.py             # Pytest fixtures and in-memory test database
-│   ├── test_product_service.py # Unit tests for service layer
-│   └── test_products_api.py    # Integration tests for HTTP endpoints (Edit Product focus)
+│   ├── verify_db.py            # Verifies PostgreSQL connection and prints server version
+│   └── seed.py                 # Seeds initial demo data
+├── tests/                      # Automated test suite (Pytest)
+│   ├── conftest.py             # In-memory test database fixture
+│   ├── test_foundation.py      # Health endpoint, CORS, and DB session tests
+│   ├── test_products_api.py    # Product API endpoint tests
+│   └── test_product_service.py # Product service unit tests
 ├── requirements.txt            # Python dependencies
-├── alembic.ini                 # Alembic configuration file
+├── alembic.ini                 # Alembic migration configuration
 ├── .env.example                # Sample environment variables template
-└── .env                        # Local environment configuration
+└── .env                        # Local environment variables (excluded from Git)
 ```
 
 ---
 
-## Quickstart Setup
+## Foundation Quickstart (Windows PowerShell)
 
-### 1. Create and Activate Virtual Environment
+### 1. Python Environment Setup
 
-```bash
-# Windows
-py -3.12 -m venv .venv
-.\.venv\Scripts\activate
+Open PowerShell in the project directory:
 
-# Linux / macOS
-python3.12 -m venv .venv
-source .venv/bin/activate
+```powershell
+cd D:\CADT\StockLens\backend
+
+# Create virtual environment (Python 3.11+)
+python -m venv .venv
+
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1
 ```
 
 ### 2. Install Dependencies
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-### 3. Environment Variables Configuration
+### 3. Configure Environment Variables
 
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
+Copy the example configuration to `.env`:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-By default, `.env` uses SQLite (`sqlite:///./stocklens.db`) for zero-configuration local development. For PostgreSQL, set:
+Open `.env` in your editor and configure your PostgreSQL database credentials:
+
 ```env
 DATABASE_URL="postgresql://postgres:your_password@localhost:5432/stocklens"
+PROJECT_NAME="StockLens API"
+BACKEND_CORS_ORIGINS="http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000"
 ```
 
-### 4. Run Migrations & Seed Demo Data
+> **Note**: `.env` is listed in `.gitignore` and is never committed to source control.
 
-```bash
+### 4. Create Database and Run Migrations
+
+Ensure your local PostgreSQL service is running. If the `stocklens` database does not exist yet, create it:
+
+```powershell
+# Using psql to create the database:
+psql -U postgres -c "CREATE DATABASE stocklens;"
+```
+
+Apply Alembic migrations to create the database tables:
+
+```powershell
 alembic upgrade head
-python scripts/seed.py
 ```
 
-### 5. Start Backend Server
+Verify your database connection with the provided verification script:
 
-```bash
+```powershell
+python scripts/verify_db.py
+```
+
+### 5. Start the FastAPI Application
+
+```powershell
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
-Interactive API documentation will be available at:
-- Swagger UI: `http://127.0.0.1:8000/api/docs`
-- ReDoc: `http://127.0.0.1:8000/api/redoc`
+
+The server will start at `http://127.0.0.1:8000`.
+
+---
+
+## Verifying Endpoints
+
+### 1. Health Check Endpoint
+- **URL**: `http://127.0.0.1:8000/health`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+  "status": "ok",
+  "service": "StockLens API"
+}
+```
+
+PowerShell test:
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/health"
+```
+
+### 2. Interactive API Documentation
+- **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+- **OpenAPI JSON**: [http://127.0.0.1:8000/api/openapi.json](http://127.0.0.1:8000/api/openapi.json)
 
 ---
 
 ## Running Automated Tests
 
-Run the full Pytest test suite with:
+Run the full automated test suite (executed in an isolated in-memory database):
 
-```bash
+```powershell
 pytest -v
 ```
 
-All 14 tests execute against an isolated in-memory SQLite database and test:
-- **Milestone 2 Priority**: Edit Product (`PUT /api/products/{id}`) with full payload
-- **Edit Product Edge Cases**: partial updates, zero stock, zero price, blanking expiration dates
-- **Input Validation**: rejecting negative quantities, negative prices, empty names, and malformed dates
-- **Error Handling**: proper HTTP 404 responses for missing products
-- **CRUD Operations**: list, get by ID, search by name/synonym, delete
-
 ---
 
-## API Endpoints (Product Management)
+## Product Management API Endpoints
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/products` | List all inventory products (supports `?search=...`, `?skip=...`, `?limit=...`) |
-| `GET` | `/api/products/{id}` | Retrieve details for a single product |
-| `POST` | `/api/products` | Create a new inventory product |
-| `PUT` | `/api/products/{id}` | **Edit product details (Milestone 2 priority)** |
-| `DELETE` | `/api/products/{id}` | Remove a product from inventory |
-| `GET` | `/health` | Server health check endpoint |
+All product endpoints are mounted under `/api/products` and conform strictly to the frontend contract (`productService.js`).
+
+| Method | Endpoint | Description | Status Code |
+|---|---|---|---|
+| `GET` | `/api/products` | Retrieve all products (supports `?search=...`, `?skip=...`, `?limit=...`) | `200 OK` |
+| `GET` | `/api/products/{id}` | Retrieve single product by ID | `200 OK` / `404 Not Found` |
+| `POST` | `/api/products` | Create a new product | `201 Created` / `422 Validation Error` |
+| `PUT` | `/api/products/{id}` | Update existing product details | `200 OK` / `404 Not Found` |
+| `DELETE` | `/api/products/{id}` | Remove a product from inventory | `200 OK` / `404 Not Found` |
+
+### Validation Rules
+
+- **`name`**: Required, cannot be empty or contain only whitespace.
+- **`quantity`**: Required when creating, must be an integer, cannot be negative (`>= 0`, zero is allowed).
+- **`unit_price`**: Required when creating, must be non-negative (`>= 0.00`, zero is allowed). Stored as `Numeric(10, 2)` / `Decimal`.
+- **`expiration_date`**: Optional. If provided, must be `YYYY-MM-DD` or empty string `""` / `null` to clear.
+- **`alternative_names`**: Optional array of strings (synonyms for OCR & voice search).

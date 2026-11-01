@@ -106,8 +106,16 @@ function acceptRemote(data) {
 export const authService = {
   async me() {
     if (!USE_MOCK) {
-      const data = await api.get(authPaths.me, { skipUnauthorizedEvent: true })
-      return data?.user || data
+      try {
+        const data = await api.get(authPaths.me, { skipUnauthorizedEvent: true })
+        return data?.user || data
+      } catch (err) {
+        if (err.status === 404 || err.status === 0) {
+          await ensureSeed()
+          return publicUser(sessionUser())
+        }
+        throw err
+      }
     }
     await ensureSeed()
     return publicUser(sessionUser())
@@ -115,8 +123,21 @@ export const authService = {
 
   async login(email, password) {
     if (!USE_MOCK) {
-      const data = acceptRemote(await api.post(authPaths.login, { email, password }, { skipUnauthorizedEvent: true }))
-      return data?.user || (await authService.me())
+      try {
+        const data = acceptRemote(await api.post(authPaths.login, { email, password }, { skipUnauthorizedEvent: true }))
+        return data?.user || (await authService.me())
+      } catch (err) {
+        if (err.status === 404 || err.status === 0) {
+          await ensureSeed()
+          const user = getUsers().find((u) => u.email === normalizeEmail(email))
+          const bad = () => fail('Incorrect email or password.', 401)
+          if (!user) { await hashPassword(password, 'x'); bad() }
+          if ((await hashPassword(password, user.salt)) !== user.hash) bad()
+          startSession(user)
+          return publicUser(user)
+        }
+        throw err
+      }
     }
     await ensureSeed()
     const user = getUsers().find((u) => u.email === normalizeEmail(email))
@@ -148,7 +169,8 @@ export const authService = {
 
   async logout() {
     if (!USE_MOCK) {
-      try { await api.post(authPaths.logout, undefined, { skipUnauthorizedEvent: true }) } finally { setAccessToken(null) }
+      try { await api.post(authPaths.logout, undefined, { skipUnauthorizedEvent: true }) } catch { /* ignore if backend auth absent */ } finally { setAccessToken(null) }
+      remove('session')
       return
     }
     remove('session')

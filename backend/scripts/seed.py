@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import date, timedelta
+from decimal import Decimal
 
 # Ensure backend root is on sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -10,8 +11,13 @@ from app.models.product import Product
 
 
 def seed_demo_data():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    try:
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+    except Exception as e:
+        print(f"[ERROR] Could not connect to database for seeding: {e}")
+        print("Please ensure your PostgreSQL database is running and credentials in backend/.env are correct.")
+        return
     try:
         if db.query(Product).count() > 0:
             print("Database already contains product data. Skipping seed.")
@@ -22,35 +28,35 @@ def seed_demo_data():
             Product(
                 name="Coca-Cola 500ml",
                 quantity=48,
-                unit_price=1.50,
+                unit_price=Decimal("1.50"),
                 expiration_date=today + timedelta(days=120),
                 alternative_names=["Coke", "Coca Cola"],
             ),
             Product(
                 name="Instant Noodles",
                 quantity=3,
-                unit_price=0.80,
+                unit_price=Decimal("0.80"),
                 expiration_date=today + timedelta(days=200),
                 alternative_names=["Ramen"],
             ),
             Product(
                 name="Whole Milk 1L",
                 quantity=12,
-                unit_price=1.90,
+                unit_price=Decimal("1.90"),
                 expiration_date=today + timedelta(days=6),
                 alternative_names=["Milk"],
             ),
             Product(
                 name="Potato Chips",
                 quantity=25,
-                unit_price=1.20,
+                unit_price=Decimal("1.20"),
                 expiration_date=today + timedelta(days=90),
                 alternative_names=["Chips", "Crisps"],
             ),
             Product(
                 name="Bottled Water 1L",
                 quantity=4,
-                unit_price=0.60,
+                unit_price=Decimal("0.60"),
                 expiration_date=None,
                 alternative_names=["Water"],
             ),

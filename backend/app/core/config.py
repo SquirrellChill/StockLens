@@ -1,7 +1,10 @@
 import os
+from pathlib import Path
 from typing import List, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_env_file = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -9,10 +12,11 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api"
 
-    # Database: Defaults to PostgreSQL, but can be overridden by environment variable or set to SQLite for testing
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/stocklens"
+    # PostgreSQL Database URL
+    # Format: postgresql://<username>:<password>@<host>:<port>/<database>
+    DATABASE_URL: str = "postgresql://postgres:db2907@localhost:5432/stocklens"
 
-    # CORS origins
+    # CORS configuration for Vite frontend
     BACKEND_CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -29,11 +33,17 @@ class Settings(BaseSettings):
             return v
         return []
 
-    # OCR settings
+    # OCR configuration
     TESSERACT_CMD: str = "tesseract"
 
+    # Image upload and validation configuration
+    MAX_UPLOAD_SIZE_BYTES: int = 10 * 1024 * 1024  # 10 MB limit matching frontend
+    ALLOWED_IMAGE_EXTENSIONS: List[str] = [".jpg", ".jpeg", ".png"]
+    ALLOWED_IMAGE_MIMES: List[str] = ["image/jpeg", "image/png"]
+    ALLOWED_IMAGE_FORMATS: List[str] = ["JPEG", "PNG"]
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_env_file) if _env_file.exists() else ".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

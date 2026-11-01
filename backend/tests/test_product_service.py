@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 import pytest
 from sqlalchemy.orm import Session
 
@@ -68,7 +69,7 @@ def test_update_product_full(db_session: Session):
     assert updated.id == initial.id
     assert updated.name == "Updated Premium Juice"
     assert updated.quantity == 35
-    assert updated.unit_price == 2.85
+    assert updated.unit_price == Decimal("2.85")
     assert updated.expiration_date == date(2026, 9, 15)
     assert updated.alternative_names == ["Premium Juice", "Orange Drink"]
 
@@ -94,7 +95,7 @@ def test_update_product_partial(db_session: Session):
     updated = product_service.update(db_session, initial.id, partial_update)
     assert updated is not None
     assert updated.quantity == 25
-    assert updated.unit_price == 2.10
+    assert updated.unit_price == Decimal("2.10")
     # Other fields remain original
     assert updated.name == "Whole Milk 1L"
     assert updated.expiration_date == date(2026, 11, 20)
