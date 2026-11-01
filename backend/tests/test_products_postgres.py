@@ -17,7 +17,7 @@ from pathlib import Path
 
 env_path = Path(__file__).resolve().parent.parent / ".env"
 env_config = dotenv_values(env_path) if env_path.exists() else {}
-PG_DATABASE_URL = env_config.get("DATABASE_URL", "postgresql://postgres:db2907@localhost:5432/stocklens")
+PG_DATABASE_URL = env_config.get("DATABASE_URL") or (os.environ.get("DATABASE_URL") if os.environ.get("DATABASE_URL", "").startswith("postgresql") else None) or settings.DATABASE_URL
 if PG_DATABASE_URL.startswith("postgresql://"):
     PG_DATABASE_URL = PG_DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
@@ -200,3 +200,80 @@ def test_postgres_validation_errors(pg_client: TestClient):
     r4 = pg_client.get("/api/products/9999999")
     assert r4.status_code == 404
     assert r4.json() == {"detail": "Product not found."}
+
+
+def test_postgres_invoice_confirmation_and_stock_sync(pg_client: TestClient, pg_engine):
+    """
+    Test invoice confirmation, stock synchronization, and duplicate detection
+    against real PostgreSQL database.
+    """
+    import uuid
+    uid_suffix = uuid.uuid4().hex[:6]
+    product_name = f"PG Real Coffee Beans {uid_suffix}"
+    supplier_name = f"PG FairTrade Beans {uid_suffix}"
+    inv_number = f"INV-PG-{uid_suffix}"
+
+    # 1. Create base product with stock 10
+    create_res = pg_client.post("/api/products", json={
+        "name": product_name,
+        "quantity": 10,
+        "unit_price": 12.00,
+        "alternative_names": [f"Beans {uid_suffix}"]
+    })
+    assert create_res.status_code == 201
+    prod_id = create_res.json()["id"]
+
+    # 2. Confirm invoice adding 15 more units at 13.50
+    inv_payload = {
+        "supplier": supplier_name,
+        "invoice_number": inv_number,
+        "date": "2026-10-31T09:00:00Z",
+        "items": [
+            {"name": product_name, "quantity": 15, "unit_price": 13.50}
+        ]
+    }
+    confirm_res = pg_client.post("/api/invoices", json=inv_payload)
+    assert confirm_res.status_code == 201
+    inv_data = confirm_res.json()
+    invoice_id = inv_data["id"]
+
+    # Verify line item links to product_id
+    assert inv_data["items"][0]["product_id"] == prod_id
+
+    # 3. Verify stock increased to 25 and price updated to 13.50 in PostgreSQL via SQL
+    with pg_engine.connect() as conn:
+        prod_row = conn.execute(
+            text("SELECT quantity, unit_price FROM products WHERE id = :pid"),
+            {"pid": prod_id}
+        ).mappings().first()
+        assert prod_row["quantity"] == 25
+        assert prod_row["unit_price"] == Decimal("13.50")
+
+        # Verify invoice and invoice_item in database
+        inv_row = conn.execute(
+            text("SELECT id, supplier, invoice_number, total FROM invoices WHERE id = :iid"),
+            {"iid": invoice_id}
+        ).mappings().first()
+        assert inv_row is not None
+        assert inv_row["supplier"] == supplier_name
+        assert inv_row["invoice_number"] == inv_number
+
+        item_row = conn.execute(
+            text("SELECT invoice_id, product_id, name, quantity, unit_price FROM invoice_items WHERE invoice_id = :iid"),
+            {"iid": invoice_id}
+        ).mappings().first()
+        assert item_row is not None
+        assert item_row["product_id"] == prod_id
+        assert item_row["quantity"] == 15
+        assert float(item_row["unit_price"]) == 13.50
+
+    # 4. Duplicate invoice rejection in PostgreSQL
+    dup_res = pg_client.post("/api/invoices", json=inv_payload)
+    assert dup_res.status_code == 409
+    assert "already been confirmed" in dup_res.json()["detail"].lower()
+
+    # 5. Cleanup test records
+    with pg_engine.begin() as conn:
+        conn.execute(text("DELETE FROM invoices WHERE id = :iid"), {"iid": invoice_id})
+        conn.execute(text("DELETE FROM products WHERE id = :pid"), {"pid": prod_id})
+

@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, String, cast
 
+from app.models.invoice_item import InvoiceItem
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductUpdate
 
@@ -95,6 +96,8 @@ class ProductService:
     def delete(db: Session, product_id: int) -> bool:
         """
         Delete a product by ID with atomic transaction management.
+        Nullifies any referencing invoice_items.product_id to preserve invoice history,
+        then permanently deletes the product record.
         Returns True if deleted, False if product does not exist.
         """
         db_product = ProductService.get_by_id(db, product_id)
@@ -102,6 +105,8 @@ class ProductService:
             return False
 
         try:
+            # Explicitly nullify foreign key references in invoice_items to maintain audit history
+            db.query(InvoiceItem).filter(InvoiceItem.product_id == product_id).update({InvoiceItem.product_id: None})
             db.delete(db_product)
             db.commit()
             return True

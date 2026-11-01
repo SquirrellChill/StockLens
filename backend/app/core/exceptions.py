@@ -43,3 +43,9 @@ class ImageProcessingError(StockLensException):
     """Raised when OpenCV processing encounters an internal failure."""
     def __init__(self, message: str = "Internal image processing failure during invoice preprocessing."):
         super().__init__(message)
+
+
+class DuplicateInvoiceError(StockLensException):
+    """Raised when attempting to confirm an invoice that has already been confirmed for this supplier."""
+    def __init__(self, message: str = "This invoice has already been confirmed."):
+        super().__init__(message)

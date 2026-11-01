@@ -12,7 +12,7 @@ let staged = null
 export const invoiceService = {
   stage(file) {
     if (staged?.preview) URL.revokeObjectURL(staged.preview)
-    staged = { file, preview: URL.createObjectURL(file), supplier: '', invoice_number: '', items: [] }
+    staged = { file, preview: URL.createObjectURL(file), supplier: '', invoice_number: '', date: '', items: [] }
     return staged
   },
 
@@ -44,20 +44,27 @@ export const invoiceService = {
         ...staged,
         supplier: data?.supplier || '',
         invoice_number: data?.invoice_number || '',
+        date: data?.date || '',
         items: (data?.items || []).map((i) => ({ name: i.name || '', quantity: i.quantity ?? 1, unit_price: i.unit_price ?? 0 })),
       }
     }
     return staged
   },
 
-  async confirm({ supplier, invoice_number, items }) {
+  async confirm({ supplier, invoice_number, items, date }) {
     const lines = items
       .map((i) => ({ name: String(i.name || '').trim(), quantity: Number(i.quantity), unit_price: Number(i.unit_price) }))
       .filter((i) => i.name)
     if (!lines.length) throw new ApiError('Add at least one item before confirming.')
     if (lines.some((i) => !(i.quantity > 0) || !(i.unit_price >= 0))) throw new ApiError('Every item needs a quantity above 0 and a valid price.')
 
-    if (!USE_MOCK) return api.post('/api/invoices', { supplier, invoice_number, items: lines })
+    const invoiceDate = date || staged?.date || undefined
+
+    if (!USE_MOCK) {
+      const res = await api.post('/api/invoices', { supplier, invoice_number, date: invoiceDate, items: lines })
+      invoiceService.discardStaged()
+      return res
+    }
 
     const products = userRead('products')
     for (const line of lines) {
@@ -67,7 +74,7 @@ export const invoiceService = {
     }
     const invoice = {
       id: uid(),
-      date: new Date().toISOString(),
+      date: invoiceDate || new Date().toISOString(),
       supplier: supplier?.trim() || 'Unknown supplier',
       invoice_number: invoice_number?.trim() || '—',
       items: lines,

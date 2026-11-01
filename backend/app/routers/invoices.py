@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.exceptions import (
     CorruptedImageError,
+    DuplicateInvoiceError,
     EmptyImageError,
     ImageProcessingError,
     ImageSizeExceededError,
@@ -137,25 +138,26 @@ async def extract_invoice(
     response_model=InvoiceResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Confirm invoice and sync stock",
-    description="Save confirmed supplier invoice and increment inventory product quantities.",
+    description="Save confirmed supplier invoice and increment inventory product quantities atomically.",
 )
 def create_invoice(
     invoice_in: InvoiceCreate,
     db: Session = Depends(get_db),
 ):
-    if not invoice_in.items:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Add at least one item before confirming.",
-        )
-    for item in invoice_in.items:
-        if item.quantity <= 0 or item.unit_price < 0:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Every item needs a quantity above 0 and a valid price.",
-            )
     try:
         return invoice_service.create(db=db, invoice_in=invoice_in)
+    except DuplicateInvoiceError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=e.message,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to confirm invoice: {e}", exc_info=True)
         raise HTTPException(

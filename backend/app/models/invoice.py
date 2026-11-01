@@ -21,4 +21,7 @@ class Invoice(Base):
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan", lazy="selectin")
 
     def __repr__(self) -> str:
-        return f"<Invoice(id={self.id}, supplier='{self.supplier}', invoice_number='{self.invoice_number}', total={self.total})>"
+        return (
+            f"<Invoice(id={self.id}, supplier='{self.supplier}', "
+            f"invoice_number='{self.invoice_number}', date={self.date}, total={self.total})>"
+        )
