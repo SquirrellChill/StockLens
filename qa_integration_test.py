@@ -1,7 +1,7 @@
 """
 StockLens Senior QA Engineer - Master Integration Test Suite
 Executes live end-to-end tests against:
-- Running PostgreSQL database (postgresql://postgres:db2907@localhost:5432/stocklens)
+- Running PostgreSQL database (postgresql://postgres:haha@localhost:5432/stocklens)
 - Running FastAPI server (http://127.0.0.1:8000)
 - Running React Vite frontend (http://localhost:5173)
 - Headless Microsoft Edge browser via Chrome DevTools Protocol (CDP)
