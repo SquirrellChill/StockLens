@@ -1,0 +1,12 @@
+# Local Postgres for development:  docker compose up -d
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: stocklens
+      POSTGRES_PASSWORD: stocklens
+      POSTGRES_DB: stocklens
+    ports: ["5433:5432"]   # 5433 so it never clashes with a PostgreSQL installed on your computer
+    volumes: ["stocklens_pg:/var/lib/postgresql/data"]
+volumes:
+  stocklens_pg:

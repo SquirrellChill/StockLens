@@ -1,0 +1,15 @@
+# Dependencies
+frontend/node_modules/
+backend/venv/
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build files
+frontend/dist/
+debug.log
