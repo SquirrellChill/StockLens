@@ -50,6 +50,7 @@ export function randomInt(min, max) {
   return min + Math.floor(Math.random() * range)
 }
 
+<<<<<<< HEAD
 /**
  * Id of the signed-in user. Demo mode keeps it in the local session; with a backend,
  * authService records it (setActiveUser) so per-user local data such as the sales draft works.
@@ -61,6 +62,10 @@ export function currentUserId() {
 export function setActiveUser(id) {
   if (id) write('activeUser', id)
   else remove('activeUser')
+=======
+export function currentUserId() {
+  return read('session', null)?.userId || null
+>>>>>>> origin/main
 }
 
 /** Per-user collection helpers: userRead('products') etc. */

@@ -105,3 +105,7 @@ TEST_DATABASE_URL=postgresql://stocklens:stocklens@localhost:5432/stocklens_test
 
 Set `SECRET_KEY`, `CORS_ORIGINS`, `DEV_EXPOSE_RESET_CODE=false`, SMTP, serve over HTTPS, and consider rate-limiting
 `/api/auth/*` (not included).
+
+# StockLens Backend
+
+Backend development will be added later.

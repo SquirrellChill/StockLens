@@ -18,7 +18,10 @@ export default function Invoices() {
     invoiceService.list().then(setInvoices).catch((e) => setError(e.message)).finally(() => setLoading(false))
   }, [])
   useEffect(load, [load])
+<<<<<<< HEAD
   useEffect(() => { invoiceService.dropSaved() }, [])
+=======
+>>>>>>> origin/main
 
   const action = <Button icon={Upload} onClick={() => navigate('/app/invoices/upload')}>Upload invoice</Button>
 

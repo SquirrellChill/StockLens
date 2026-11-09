@@ -183,6 +183,7 @@ img.mobile-avatar { object-fit: cover; }
   .line-items li { flex-direction: column; gap: 2px; }
   .line-items .li-calc { white-space: normal; }
 }
+<<<<<<< HEAD
 
 /* ---- batch invoice upload & review ---- */
 .upload-zone.dragging { border-color: var(--color-brand); background: var(--color-brand-soft); }
@@ -225,3 +226,5 @@ img.mobile-avatar { object-fit: cover; }
 .modal.lightbox { width: min(860px, 100%); }
 .lightbox-photos { display: grid; gap: 12px; }.lightbox-photos img { width: 100%; border-radius: 10px; border: 1px solid var(--color-line); }
 @media (max-width: 680px) { .confirm-bar { bottom: 74px; } .draft-title small { max-width: 180px; } }
+=======
+>>>>>>> origin/main

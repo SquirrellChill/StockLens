@@ -5,7 +5,11 @@ import { formatCurrency, formatDate } from '../utils/formatCurrency'
 
 export const dashboardService = {
   async summary() {
+<<<<<<< HEAD
     if (!USE_MOCK) return api.get(`/api/dashboard?tz_offset=${new Date().getTimezoneOffset()}`)
+=======
+    if (!USE_MOCK) return api.get('/api/dashboard')
+>>>>>>> origin/main
 
     const products = userRead('products')
     const sales = userRead('sales')

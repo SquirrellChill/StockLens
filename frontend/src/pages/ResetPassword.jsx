@@ -3,6 +3,10 @@ import { Link, useLocation } from 'react-router'
 import AuthLayout from '../components/AuthLayout'
 import PasswordField from '../components/PasswordField'
 import { useAuth } from '../auth/AuthContext'
+<<<<<<< HEAD
+=======
+import { USE_MOCK } from '../services/api'
+>>>>>>> origin/main
 import { isEmail, passwordError } from '../utils/validation'
 
 export default function ResetPassword() {
@@ -59,7 +63,11 @@ export default function ResetPassword() {
         <form onSubmit={submit} noValidate>
           {error && <div className="auth-message error" role="alert">{error}</div>}
           {info && <div className="auth-message success" role="status">{info}</div>}
+<<<<<<< HEAD
           {demoCode && <div className="demo-hint">Development mode sends no email. Your code is <b>{demoCode}</b>. It expires in 10 minutes.</div>}
+=======
+          {USE_MOCK && demoCode && <div className="demo-hint">Demo mode sends no email. Your code is <b>{demoCode}</b>. It expires in 10 minutes.</div>}
+>>>>>>> origin/main
           <label><span>Email address</span><input name="email" type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></label>
           <label><span>6-digit code</span><input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.replace(/\D/g, '') })} placeholder="123456" /></label>
           <PasswordField name="password" label="New password" autoComplete="new-password" placeholder="At least 8 characters" value={form.password} onChange={(password) => setForm({ ...form, password })} />
