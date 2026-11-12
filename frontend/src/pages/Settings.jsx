@@ -6,10 +6,6 @@ import Modal from '../components/Modal'
 import PasswordField from '../components/PasswordField'
 import Avatar from '../components/Avatar'
 import { useAuth } from '../auth/AuthContext'
-<<<<<<< HEAD
-=======
-import { USE_MOCK } from '../services/api'
->>>>>>> origin/main
 import { isEmail, passwordError } from '../utils/validation'
 
 export default function Settings() {
@@ -126,11 +122,7 @@ export default function Settings() {
             </div>
           ) : (
             <form className="settings-form" onSubmit={savePassword} noValidate>
-<<<<<<< HEAD
               {demoCode && <div className="demo-hint">Development mode sends no email. Your code is <b>{demoCode}</b>.</div>}
-=======
-              {USE_MOCK && demoCode && <div className="demo-hint">Demo mode sends no email. Your code is <b>{demoCode}</b>.</div>}
->>>>>>> origin/main
               <label><span>6-digit code</span><input name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={pw.code} onChange={(e) => setPw({ ...pw, code: e.target.value.replace(/\D/g, '') })} placeholder="123456" /></label>
               <PasswordField name="next" label="New password" autoComplete="new-password" value={pw.next} onChange={(next) => setPw({ ...pw, next })} />
               <PasswordField name="confirm" label="Confirm new password" autoComplete="new-password" value={pw.confirm} onChange={(confirm) => setPw({ ...pw, confirm })} />
